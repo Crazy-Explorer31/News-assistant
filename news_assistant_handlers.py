@@ -1,7 +1,7 @@
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from news_reader import get_news
+from news_reader import get_news, get_joined_news
 from news_filter import get_filtered_news
 
 # Список для хранения каналов
@@ -43,6 +43,7 @@ async def view_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     news = await get_news(channels)  # Получаем новости
     news = get_filtered_news(news)
+    news = get_joined_news(news)
     await update.message.reply_text(news, disable_web_page_preview=True)
 
 # Обработчик текстовых сообщений

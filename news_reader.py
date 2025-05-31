@@ -26,4 +26,7 @@ async def get_news(channels) -> str:
             news.append(f"Ошибка при получении новостей из {channel}: {str(e)}")
 
     await client.disconnect()  # Отключаем клиента
+    return news
+
+def get_joined_news(news): # list to str
     return separator.join(news) if news else "Нет новостей."
