@@ -10,6 +10,7 @@ api_hash = sys.argv[2]
 
 client = TelegramClient("NewsReader", api_id, api_hash)
 
+separator = "\n\n-----------------------------------------------------------------------------------------------\n\n"
 
 async def get_news(channels) -> str:
     news = []
@@ -25,4 +26,4 @@ async def get_news(channels) -> str:
             news.append(f"Ошибка при получении новостей из {channel}: {str(e)}")
 
     await client.disconnect()  # Отключаем клиента
-    return "\n".join(news) if news else "Нет новостей."
+    return separator.join(news) if news else "Нет новостей."
