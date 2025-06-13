@@ -18,6 +18,7 @@ app.add_handler(
             | filters.Regex("^Удалить каналы$")
             | filters.Regex("^Просмотреть каналы$")
             | filters.Regex("^Получить новости$")
+            | filters.Regex("^Изменить новостные категории$")
         ),
         button_handler,
     )
