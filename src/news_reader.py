@@ -12,6 +12,17 @@ api_hash = sys.argv[2]
 client = TelegramClient("NewsReader", api_id, api_hash)
 
 
+async def channel_exists(channel) -> bool:
+    await client.start()  # Запускаем клиента
+    try:
+        async for message in client.iter_messages(channel, limit=1):
+            return True  # Если удалось получить сообщение, канал существует
+    except Exception:
+        return False  # Если возникла ошибка, канал не существует
+    finally:
+        await client.disconnect()  # Отключаем клиента
+
+
 async def get_news(channels) -> str:
     news = []
     await client.start()  # Запускаем клиента
@@ -29,6 +40,9 @@ async def get_news(channels) -> str:
     return news
 
 
-def get_pretty_news(news):  # list to str
-    highlight_heading = lambda l: ["*" + l[0] + "*", l[1].strip()]
+def highlight_heading(list_two):
+    return ["*" + list_two[0] + "*", list_two[1].strip()]
+
+
+def get_pretty_news(news):
     return ["\n".join(highlight_heading(item.split(":", 1))) for item in news]

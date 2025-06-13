@@ -4,10 +4,10 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
 from news_filter import get_filtered_news
-from news_reader import get_news, get_pretty_news
+from news_reader import channel_exists, get_news, get_pretty_news
 
 # Текущие каналы
-channels = []
+channels = set()
 
 # Категории ---> коды
 with open("include/news_categories.json", "r", encoding="utf-8") as file:
@@ -115,12 +115,19 @@ async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     news = await get_news(channels)  # Получаем новости
     if len(news) == 0:
         await update.message.reply_text(
-            "Подходящих новостей не нашлось",
+            "Новостей не нашлось",
             reply_markup=get_start_keyboard(),
             disable_web_page_preview=True,
         )
         return
     news = get_filtered_news(news, categories, choosen_categories)
+    if len(news) == 0:
+        await update.message.reply_text(
+            "Подходящих новостей не нашлось",
+            reply_markup=get_start_keyboard(),
+            disable_web_page_preview=True,
+        )
+        return
     news = get_pretty_news(news)
     for item in news:
         await update.message.reply_text(
@@ -147,13 +154,29 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     action = context.user_data.get("action")
     if action == "add":
         new_channels = update.message.text.split()
-        if new_channels:
-            channels.extend(new_channels)
+
+        good_channels = [
+            new_channel
+            for new_channel in new_channels
+            if await channel_exists(new_channel)
+        ]
+        bad_channels = [
+            new_channel
+            for new_channel in new_channels
+            if not (await channel_exists(new_channel))
+        ]
+        if bad_channels:
             await update.message.reply_text(
-                f'Каналы добавлены: {", ".join(new_channels)}',
+                f'Каналы не существуют: {", ".join(bad_channels)}',
                 reply_markup=get_start_keyboard(),
             )
-        else:
+        if good_channels:
+            channels.update(set(good_channels))
+            await update.message.reply_text(
+                f'Каналы добавлены: {", ".join(good_channels)}',
+                reply_markup=get_start_keyboard(),
+            )
+        if not good_channels and not bad_channels:
             await update.message.reply_text(
                 "Вы не ввели каналы.", reply_markup=get_start_keyboard()
             )

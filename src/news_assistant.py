@@ -1,9 +1,9 @@
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 from news_assistant_handlers import button_handler, handle_text, start
+from news_classifier_load import identity_tokenizer
 
 print("Loading NewsAssistant_bot...")
-from news_classifier_load import identity_tokenizer
 
 # Создание приложения
 app = (
