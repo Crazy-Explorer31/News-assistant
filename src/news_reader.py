@@ -1,5 +1,6 @@
-from telethon import TelegramClient # type: ignore
 import sys
+
+from telethon import TelegramClient  # type: ignore
 
 if len(sys.argv) != 3:
     print("Использование: python news_assistant.py <api_id> <api_hash>")
@@ -11,6 +12,7 @@ api_hash = sys.argv[2]
 client = TelegramClient("NewsReader", api_id, api_hash)
 
 separator = "\n\n-----------------------------------------------------------------------------------------------\n\n"
+
 
 async def get_news(channels) -> str:
     news = []
@@ -28,5 +30,6 @@ async def get_news(channels) -> str:
     await client.disconnect()  # Отключаем клиента
     return news
 
-def get_joined_news(news): # list to str
+
+def get_joined_news(news):  # list to str
     return separator.join(news) if news else "Нет новостей."
