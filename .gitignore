@@ -1,0 +1,4 @@
+*.nix
+*.csv
+*.session
+__pycache__
