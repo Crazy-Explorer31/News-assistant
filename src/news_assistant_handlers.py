@@ -1,42 +1,33 @@
+import json
+
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
 from news_filter import get_filtered_news
 from news_reader import get_joined_news, get_news
-from news_classifier_load import NewsClassifierLoader, identity_tokenizer
 
 # Текущие каналы
 channels = []
 
 # Категории ---> коды
-categories = {
-    "Общество / Россия" : 0,
-    "Экономика" : 1,
-    "Силовые структуры" : 2,
-    "Бывший СССР" : 3,
-    "Спорт" : 4,
-    "Здоровье" : 5,
-    "Строительство" : 6,
-    "Туризм" : 7
-}
+with open("include/news_categories.json", "r", encoding="utf-8") as file:
+    categories = json.load(file)
 
 # Категории ---> выбраны ли
 choosen_categories = {
-    "Общество / Россия" : True,
-    "Экономика" : True,
-    "Силовые структуры" : True,
-    "Бывший СССР" : True,
-    "Спорт" : True,
-    "Здоровье" : True,
-    "Строительство" : True,
-    "Туризм" : True
+    "Общество / Россия": True,
+    "Экономика": True,
+    "Силовые структуры": True,
+    "Бывший СССР": True,
+    "Спорт": True,
+    "Здоровье": True,
+    "Строительство": True,
+    "Туризм": True,
 }
 
-# Смешняфка
-status_emoji = {
-    True : "✅",
-    False : "❌"
-}
+# Статус ---> эмодзи
+status_emoji = {True: "✅", False: "❌"}
+
 
 # Функция для создания начальной клавиатуры
 def get_start_keyboard():
@@ -46,13 +37,30 @@ def get_start_keyboard():
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
+
 def get_categories_keyboard():
     choosen_categories_info = list(choosen_categories.items())
-    keyboard =  [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[:2]]]
-    keyboard += [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[2:5]]]
-    keyboard += [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[5:]]]
+    keyboard = [
+        [
+            status_emoji[is_choosen] + " " + category
+            for category, is_choosen in choosen_categories_info[:2]
+        ]
+    ]
+    keyboard += [
+        [
+            status_emoji[is_choosen] + " " + category
+            for category, is_choosen in choosen_categories_info[2:5]
+        ]
+    ]
+    keyboard += [
+        [
+            status_emoji[is_choosen] + " " + category
+            for category, is_choosen in choosen_categories_info[5:]
+        ]
+    ]
     keyboard += [["🔙 Вернуться"]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
 
 # Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -83,10 +91,13 @@ async def remove_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def view_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if channels:
         await update.message.reply_text(
-            f'Текущий список каналов: {", ".join(channels)}', reply_markup=get_start_keyboard()
+            f'Текущий список каналов: {", ".join(channels)}',
+            reply_markup=get_start_keyboard(),
         )
     else:
-        await update.message.reply_text("Список каналов пуст.", reply_markup=get_start_keyboard())
+        await update.message.reply_text(
+            "Список каналов пуст.", reply_markup=get_start_keyboard()
+        )
 
 
 # Обработчик кнопки "Получить новости"
@@ -94,11 +105,15 @@ async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     news = await get_news(channels)  # Получаем новости
     news = get_filtered_news(news, categories, choosen_categories)
     news = get_joined_news(news)
-    await update.message.reply_text(news, reply_markup=get_start_keyboard(), disable_web_page_preview=True)
+    await update.message.reply_text(
+        news, reply_markup=get_start_keyboard(), disable_web_page_preview=True
+    )
 
 
 # Обработчик кнопки "Изменить новостные категории"
-async def change_current_categories(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def change_current_categories(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     await update.message.reply_text(
         "Выберите нужные новостные категории:",
         reply_markup=get_categories_keyboard(),
@@ -141,11 +156,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         context.user_data["action"] = None  # Сбрасываем действие
     elif action == "categories_change":
         change_command = update.message.text.split()[1:]
-        change_command = ' '.join(change_command)
+        change_command = " ".join(change_command)
 
         if change_command == "Вернуться":
             context.user_data["action"] = None  # Сбрасываем действие
-            await update.message.reply_text("Пожалуйста, выберите команду из меню.", reply_markup=get_start_keyboard())
+            await update.message.reply_text(
+                "Пожалуйста, выберите команду из меню.",
+                reply_markup=get_start_keyboard(),
+            )
 
         elif change_command in choosen_categories.keys():
             changed_status = not choosen_categories[change_command]
@@ -153,7 +171,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             changed_status_msg = "добавлена" if changed_status else "удалена"
             await update.message.reply_text(
                 f"Категория *{change_command}* {changed_status_msg}",
-                parse_mode='Markdown',
+                parse_mode="Markdown",
                 reply_markup=get_categories_keyboard(),
             )
 
@@ -162,10 +180,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 "Выберите новостные категории из меню!",
                 reply_markup=get_categories_keyboard(),
             )
-            print(change_command, "failed") # TODO: remove
-            
+            print(change_command, "failed")  # TODO: remove
+
     else:
-        await update.message.reply_text("Пожалуйста, выберите команду из меню.", reply_markup=get_start_keyboard())
+        await update.message.reply_text(
+            "Пожалуйста, выберите команду из меню.", reply_markup=get_start_keyboard()
+        )
 
 
 # Обработчик текстовых сообщений для кнопок

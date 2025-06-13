@@ -1,10 +1,6 @@
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 from news_assistant_handlers import button_handler, handle_text, start
-from joblib import load
-
-from news_classifier_load import NewsClassifierLoader, identity_tokenizer
-
 
 # Создание приложения
 app = (

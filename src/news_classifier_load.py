@@ -51,13 +51,17 @@ def get_preprocessed_dataset(dataset, vectorizer):
 
 
 class NewsClassifierLoader:
-    def __init__(self, path_to_classifier): # если грузить модель в конструкторе, ругается на 
-                                            # Can't get attribute 'identity_tokenizer' on <module '__main__'
+    def __init__(
+        self, path_to_classifier
+    ):  # если грузить модель в конструкторе, ругается на
+        # Can't get attribute 'identity_tokenizer' on <module '__main__'
         nltk.download("stopwords")
         self.path_to_classifier = path_to_classifier
 
     def predict(self, dataset: pd.DataFrame):
-        self.classifier, self.vectorizer = load(self.path_to_classifier)  # грузим модель
+        self.classifier, self.vectorizer = load(
+            self.path_to_classifier
+        )  # грузим модель
         preprocessed_dataset = get_preprocessed_dataset(dataset, self.vectorizer)
         y_pred = self.classifier.predict(preprocessed_dataset)
 
