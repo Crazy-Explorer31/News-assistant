@@ -1,0 +1,14 @@
+numpy
+pandas
+scikit-learn
+uvicorn
+fastapi
+python-multipart
+streamlit
+pillow
+matplotlib
+seaborn
+plotly
+pylint
+flake8
+pycodestyle
