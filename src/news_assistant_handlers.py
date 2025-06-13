@@ -4,7 +4,7 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
 from news_filter import get_filtered_news
-from news_reader import get_joined_news, get_news
+from news_reader import get_news, get_pretty_news
 
 # Текущие каналы
 channels = []
@@ -62,6 +62,16 @@ def get_categories_keyboard():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
+# Обработчик команды /help
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "Вас приветствует новоствой ассистент!\n"
+        "Здесь Вы можете читать новости из разных телеграм каналов, при этом:"
+        "- выбирая, какие каналы интересны Вам"
+        "- выбирая, какие новостные категории интересны Вам."
+    )
+
+
 # Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
@@ -103,11 +113,22 @@ async def view_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 # Обработчик кнопки "Получить новости"
 async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     news = await get_news(channels)  # Получаем новости
+    if len(news) == 0:
+        await update.message.reply_text(
+            "Подходящих новостей не нашлось",
+            reply_markup=get_start_keyboard(),
+            disable_web_page_preview=True,
+        )
+        return
     news = get_filtered_news(news, categories, choosen_categories)
-    news = get_joined_news(news)
-    await update.message.reply_text(
-        news, reply_markup=get_start_keyboard(), disable_web_page_preview=True
-    )
+    news = get_pretty_news(news)
+    for item in news:
+        await update.message.reply_text(
+            item,
+            reply_markup=get_start_keyboard(),
+            disable_web_page_preview=True,
+            parse_mode="Markdown",
+        )
 
 
 # Обработчик кнопки "Изменить новостные категории"

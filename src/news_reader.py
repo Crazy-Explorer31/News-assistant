@@ -11,8 +11,6 @@ api_hash = sys.argv[2]
 
 client = TelegramClient("NewsReader", api_id, api_hash)
 
-separator = "\n\n-----------------------------------------------------------------------------------------------\n\n"
-
 
 async def get_news(channels) -> str:
     news = []
@@ -31,5 +29,6 @@ async def get_news(channels) -> str:
     return news
 
 
-def get_joined_news(news):  # list to str
-    return separator.join(news) if news else "Нет новостей."
+def get_pretty_news(news):  # list to str
+    highlight_heading = lambda l: ["*" + l[0] + "*", l[1].strip()]
+    return ["\n".join(highlight_heading(item.split(":", 1))) for item in news]
