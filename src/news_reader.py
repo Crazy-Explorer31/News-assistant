@@ -21,7 +21,7 @@ async def get_news(channels) -> str:
     for channel in channels:
         try:
             async for message in client.iter_messages(
-                channel, limit=2
+                channel, limit=4
             ):  # Получаем последнее сообщение
                 news.append(f"{channel}: {message.text}")
         except Exception as e:

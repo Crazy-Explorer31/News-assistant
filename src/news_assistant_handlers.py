@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 
 from news_filter import get_filtered_news
 from news_reader import get_joined_news, get_news
+from news_classifier_load import NewsClassifierLoader, identity_tokenizer
 
 # Текущие каналы
 channels = []
@@ -47,9 +48,10 @@ def get_start_keyboard():
 
 def get_categories_keyboard():
     choosen_categories_info = list(choosen_categories.items())
-    keyboard =  [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[:4]]]
-    keyboard += [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[4:]]]
-    keyboard[-1] += ["🔙 Вернуться"]
+    keyboard =  [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[:2]]]
+    keyboard += [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[2:5]]]
+    keyboard += [[status_emoji[is_choosen] + ' ' + category for category, is_choosen in choosen_categories_info[5:]]]
+    keyboard += [["🔙 Вернуться"]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # Обработчик команды /start
@@ -81,18 +83,18 @@ async def remove_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def view_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if channels:
         await update.message.reply_text(
-            f'Текущий список каналов: {", ".join(channels)}'
+            f'Текущий список каналов: {", ".join(channels)}', reply_markup=get_start_keyboard()
         )
     else:
-        await update.message.reply_text("Список каналов пуст.")
+        await update.message.reply_text("Список каналов пуст.", reply_markup=get_start_keyboard())
 
 
 # Обработчик кнопки "Получить новости"
 async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     news = await get_news(channels)  # Получаем новости
-    news = get_filtered_news(news)
+    news = get_filtered_news(news, categories, choosen_categories)
     news = get_joined_news(news)
-    await update.message.reply_text(news, disable_web_page_preview=True)
+    await update.message.reply_text(news, reply_markup=get_start_keyboard(), disable_web_page_preview=True)
 
 
 # Обработчик кнопки "Изменить новостные категории"
@@ -160,10 +162,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 "Выберите новостные категории из меню!",
                 reply_markup=get_categories_keyboard(),
             )
-            print(change_command, "failed")
+            print(change_command, "failed") # TODO: remove
             
     else:
-        await update.message.reply_text("Пожалуйста, выберите команду из меню.")
+        await update.message.reply_text("Пожалуйста, выберите команду из меню.", reply_markup=get_start_keyboard())
 
 
 # Обработчик текстовых сообщений для кнопок

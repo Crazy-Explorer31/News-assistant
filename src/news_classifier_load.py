@@ -14,7 +14,6 @@ def tokenize(text):
 
 
 def stop_words_ret():  # выбираем какие стоп-слова будем удалять
-    nltk.download("stopwords")
     stop_words = stopwords.words("russian")
     stop_words += ["фото", "com", "ru"]
     return stop_words
@@ -52,10 +51,13 @@ def get_preprocessed_dataset(dataset, vectorizer):
 
 
 class NewsClassifierLoader:
-    def __init__(self, path_to_classifier):
-        self.classifier, self.vectorizer = load(path_to_classifier)  # грузим модель
+    def __init__(self, path_to_classifier): # если грузить модель в конструкторе, ругается на 
+                                            # Can't get attribute 'identity_tokenizer' on <module '__main__'
+        nltk.download("stopwords")
+        self.path_to_classifier = path_to_classifier
 
     def predict(self, dataset: pd.DataFrame):
+        self.classifier, self.vectorizer = load(self.path_to_classifier)  # грузим модель
         preprocessed_dataset = get_preprocessed_dataset(dataset, self.vectorizer)
         y_pred = self.classifier.predict(preprocessed_dataset)
 
@@ -70,4 +72,4 @@ def run_example():
 
     y_pred = clfr.predict(dataset)
 
-    print(y_pred)
+    print(y_pred.tolist())
