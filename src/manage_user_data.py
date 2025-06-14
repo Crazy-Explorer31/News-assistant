@@ -43,7 +43,7 @@ def sure_user_registration(user_id: str):
     """В случае необходимости, регистрирует пользователя в системе"""
     choosen_categories = get_user_categories(user_id)
     readcount = get_user_readcount(user_id)
-    if set(choosen_categories.keys()) != set(categories.keys()) or readcount == None:
+    if set(choosen_categories.keys()) != set(categories.keys()) or readcount is None:
         do_user_registration(user_id)
 
 
