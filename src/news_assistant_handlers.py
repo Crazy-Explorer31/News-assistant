@@ -1,29 +1,10 @@
-import json
-
+import telegram
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
+from manage_user_data import *
 from news_filter import get_filtered_news
 from news_reader import channel_exists, get_news, get_pretty_news
-
-# Текущие каналы
-channels = set()
-
-# Категории ---> коды
-with open("include/news_categories.json", "r", encoding="utf-8") as file:
-    categories = json.load(file)
-
-# Категории ---> выбраны ли
-choosen_categories = {
-    "Общество / Россия": True,
-    "Экономика": True,
-    "Силовые структуры": True,
-    "Бывший СССР": True,
-    "Спорт": True,
-    "Здоровье": True,
-    "Строительство": True,
-    "Туризм": True,
-}
 
 # Статус ---> эмодзи
 status_emoji = {True: "✅", False: "❌"}
@@ -32,13 +13,18 @@ status_emoji = {True: "✅", False: "❌"}
 # Функция для создания начальной клавиатуры
 def get_start_keyboard():
     keyboard = [
-        ["Добавить каналы", "Удалить каналы"],
-        ["Просмотреть каналы", "Получить новости", "Изменить новостные категории"],
+        ["Добавить каналы", "Удалить каналы", "Просмотреть каналы"],
+        [
+            "Получить новости",
+            "Изменить новостные категории",
+            "Изменить число считываемых новостей",
+        ],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
-def get_categories_keyboard():
+def get_categories_keyboard(user_id: str):
+    choosen_categories = get_user_categories(user_id)
     choosen_categories_info = list(choosen_categories.items())
     keyboard = [
         [
@@ -99,6 +85,9 @@ async def remove_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 # Обработчик кнопки "Просмотреть каналы"
 async def view_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = str(update.message.from_user.id)
+    channels = get_user_channels(user_id)
+
     if channels:
         await update.message.reply_text(
             f'Текущий список каналов: {", ".join(channels)}',
@@ -112,7 +101,13 @@ async def view_channels(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 # Обработчик кнопки "Получить новости"
 async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    news = await get_news(channels)  # Получаем новости
+    user_id = str(update.message.from_user.id)
+    sure_user_registration(user_id)
+    channels = get_user_channels(user_id)
+    choosen_categories = get_user_categories(user_id)
+    news_readcount = int(get_user_readcount(user_id))
+
+    news = await get_news(channels, news_readcount)  # Получаем новости
     if len(news) == 0:
         await update.message.reply_text(
             "Новостей не нашлось",
@@ -130,27 +125,61 @@ async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
     news = get_pretty_news(news)
     for item in news:
+        if item[0] == "" or item[1] == "":
+            continue
+
         await update.message.reply_text(
-            item,
+            item[0],
             reply_markup=get_start_keyboard(),
             disable_web_page_preview=True,
             parse_mode="Markdown",
         )
+        try:
+            await update.message.reply_text(
+                item[1],
+                reply_markup=get_start_keyboard(),
+                disable_web_page_preview=True,
+                parse_mode="Markdown",
+            )
+        except telegram.error.BadRequest:
+            await update.message.reply_text(
+                item[1],
+                reply_markup=get_start_keyboard(),
+                disable_web_page_preview=True,
+                parse_mode="HTML",
+            )
 
 
 # Обработчик кнопки "Изменить новостные категории"
 async def change_current_categories(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
+    user_id = str(update.message.from_user.id)
+    sure_user_registration(user_id)
+
     await update.message.reply_text(
         "Выберите нужные новостные категории:",
-        reply_markup=get_categories_keyboard(),
+        reply_markup=get_categories_keyboard(user_id),
     )
-    context.user_data["action"] = "categories_change"  # Сохраняем действие
+    context.user_data["action"] = "change_categories"  # Сохраняем действие
+
+
+# Обработчик кнопки "Изменить число считываемых новостей"
+async def change_news_read_count(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    user_id = str(update.message.from_user.id)
+    old_readcount = get_user_readcount(user_id)
+    await update.message.reply_text(
+        f"Введите, сколько последних новостей из каждого канала исследовать (сейчас это {old_readcount}):",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    context.user_data["action"] = "change_readcount"
 
 
 # Обработчик текстовых сообщений
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = str(update.message.from_user.id)
     action = context.user_data.get("action")
     if action == "add":
         new_channels = update.message.text.split()
@@ -171,7 +200,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 reply_markup=get_start_keyboard(),
             )
         if good_channels:
-            channels.update(set(good_channels))
+            add_user_channels(user_id, set(good_channels))
             await update.message.reply_text(
                 f'Каналы добавлены: {", ".join(good_channels)}',
                 reply_markup=get_start_keyboard(),
@@ -182,13 +211,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
         context.user_data["action"] = None  # Сбрасываем действие
     elif action == "remove":
+        channels = get_user_channels(user_id)
         channels_to_remove = update.message.text.split()
         removed_channels = [
             channel for channel in channels_to_remove if channel in channels
         ]
-        for channel in removed_channels:
-            channels.remove(channel)
         if removed_channels:
+            remove_user_channels(user_id, set(removed_channels))
             await update.message.reply_text(
                 f'Каналы удалены: {", ".join(removed_channels)}',
                 reply_markup=get_start_keyboard(),
@@ -198,7 +227,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 "Каналы не найдены для удаления.", reply_markup=get_start_keyboard()
             )
         context.user_data["action"] = None  # Сбрасываем действие
-    elif action == "categories_change":
+    elif action == "change_categories":
         change_command = update.message.text.split()[1:]
         change_command = " ".join(change_command)
 
@@ -209,22 +238,34 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 reply_markup=get_start_keyboard(),
             )
 
-        elif change_command in choosen_categories.keys():
-            changed_status = not choosen_categories[change_command]
-            choosen_categories[change_command] = changed_status
-            changed_status_msg = "добавлена" if changed_status else "удалена"
+        elif change_command in categories.keys():
+            changed_status_msg = change_user_categories(user_id, change_command)
             await update.message.reply_text(
                 f"Категория *{change_command}* {changed_status_msg}",
                 parse_mode="Markdown",
-                reply_markup=get_categories_keyboard(),
+                reply_markup=get_categories_keyboard(user_id),
             )
 
         else:
             await update.message.reply_text(
                 "Выберите новостные категории из меню!",
-                reply_markup=get_categories_keyboard(),
+                reply_markup=get_categories_keyboard(user_id),
             )
             print(change_command, "failed")  # TODO: remove
+    elif action == "change_readcount":
+        new_readcount = update.message.text.split()[0]
+        if new_readcount.isdigit():
+            change_user_readcount(user_id, new_readcount)
+            context.user_data["action"] = None  # Сбрасываем действие
+            await update.message.reply_text(
+                f"Теперь считываем по {new_readcount} новостей из каждого канала!",
+                reply_markup=get_start_keyboard(),
+            )
+        else:
+            await update.message.reply_text(
+                f"Введите корректное число",
+                reply_markup=ReplyKeyboardRemove(),
+            )
 
     else:
         await update.message.reply_text(
@@ -245,3 +286,5 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await get_news_command(update, context)
     elif text == "Изменить новостные категории":
         await change_current_categories(update, context)
+    elif text == "Изменить число считываемых новостей":
+        await change_news_read_count(update, context)

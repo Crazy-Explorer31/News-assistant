@@ -19,7 +19,6 @@ def get_filtered_news(
     ]
 
     news_classified = classifier.predict(news_df).tolist()
-    # print(news_classified)
 
     news_interesting_list = [
         news

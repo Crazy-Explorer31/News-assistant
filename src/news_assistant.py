@@ -23,6 +23,7 @@ app.add_handler(
             | filters.Regex("^Просмотреть каналы$")
             | filters.Regex("^Получить новости$")
             | filters.Regex("^Изменить новостные категории$")
+            | filters.Regex("^Изменить число считываемых новостей$")
         ),
         button_handler,
     )

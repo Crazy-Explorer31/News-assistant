@@ -23,14 +23,14 @@ async def channel_exists(channel) -> bool:
         await client.disconnect()  # Отключаем клиента
 
 
-async def get_news(channels) -> str:
+async def get_news(channels, news_readcount) -> str:
     news = []
     await client.start()  # Запускаем клиента
 
     for channel in channels:
         try:
             async for message in client.iter_messages(
-                channel, limit=4
+                channel, limit=news_readcount
             ):  # Получаем последнее сообщение
                 news.append(f"{channel}: {message.text}")
         except Exception as e:
@@ -41,8 +41,8 @@ async def get_news(channels) -> str:
 
 
 def highlight_heading(list_two):
-    return ["*" + list_two[0] + "*", list_two[1].strip()]
+    return ["⬇⬇⬇*" + list_two[0] + "*⬇⬇⬇", list_two[1].strip()]
 
 
 def get_pretty_news(news):
-    return ["\n".join(highlight_heading(item.split(":", 1))) for item in news]
+    return [highlight_heading(item.split(":", 1)) for item in news]
