@@ -8,24 +8,11 @@ r = redis.Redis(host="localhost", port=6379, db=0)
 with open("include/news_categories.json", "r", encoding="utf-8") as file:
     categories = json.load(file)
 
+# Инвертирование 0 <-> 1
 invert_zero_one = {"0": "1", "1": "0"}
 
-
-def do_user_registration(user_id: str):
-    """Регистрирует пользователя в системе"""
-    user_key = get_user_categories_key(user_id)
-
-    with r.pipeline() as pipeline:
-        for category in categories.keys():
-            pipeline.hset(user_key, category, "1")
-        pipeline.execute()
-
-
-def sure_user_registration(user_id: str):
-    """В случае необходимости, регистрирует пользователя в системе"""
-    choosen_categories = get_user_categories(user_id)
-    if set(choosen_categories.keys()) != set(categories.keys()):
-        do_user_registration(user_id)
+# Статус_строка ---> статус_булеан
+status_to_bool = {"1": True, "0": False}
 
 
 def get_user_channels_key(user_id: str):
@@ -34,6 +21,41 @@ def get_user_channels_key(user_id: str):
 
 def get_user_categories_key(user_id: str):
     return "user:" + user_id + ":categories"
+
+
+def get_user_readcount_key(user_id: str):
+    return "user:" + user_id + ":readcount"
+
+
+def do_user_registration(user_id: str):
+    """Регистрирует пользователя в системе"""
+    user_key = get_user_categories_key(user_id)
+    user_key_readcount = get_user_readcount_key(user_id)
+
+    with r.pipeline() as pipeline:
+        pipeline.set(user_key_readcount, "5")
+        for category in categories.keys():
+            pipeline.hset(user_key, category, "1")
+        pipeline.execute()
+
+
+def sure_user_registration(user_id: str):
+    """В случае необходимости, регистрирует пользователя в системе"""
+    choosen_categories = get_user_categories(user_id)
+    readcount = get_user_readcount(user_id)
+    if set(choosen_categories.keys()) != set(categories.keys()) or readcount == None:
+        do_user_registration(user_id)
+
+
+def get_user_readcount(user_id: str):
+    """Возвращает число считываемых для рассмотрения пользователем новостей"""
+    user_key_readcount = get_user_readcount_key(user_id)
+
+    readcount = r.get(user_key_readcount)
+
+    if readcount is not None:
+        return readcount.decode("utf-8`")
+    return None
 
 
 def get_user_channels(user_id: str):
@@ -52,11 +74,19 @@ def get_user_categories(user_id: str):
 
     choosen_categories = r.hgetall(user_key)
     choosen_categories = {
-        key.decode("utf-8`"): value.decode("utf-8`")
+        key.decode("utf-8`"): status_to_bool[value.decode("utf-8`")]
         for key, value in choosen_categories.items()
     }
 
     return choosen_categories
+
+
+def change_user_readcount(user_id: str, new_readcount: str):
+    user_key_readcount = get_user_readcount_key(user_id)
+
+    with r.pipeline() as pipeline:
+        pipeline.set(user_key_readcount, new_readcount)
+        pipeline.execute()
 
 
 def add_user_channels(user_id: str, channels_to_add):

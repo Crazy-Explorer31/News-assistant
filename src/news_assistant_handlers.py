@@ -9,15 +9,16 @@ from news_reader import channel_exists, get_news, get_pretty_news
 # Статус ---> эмодзи
 status_emoji = {True: "✅", False: "❌"}
 
-# Статус_строка ---> статус_булеан
-status_to_bool = {"1": True, "0": False}
-
 
 # Функция для создания начальной клавиатуры
 def get_start_keyboard():
     keyboard = [
-        ["Добавить каналы", "Удалить каналы"],
-        ["Просмотреть каналы", "Получить новости", "Изменить новостные категории"],
+        ["Добавить каналы", "Удалить каналы", "Просмотреть каналы"],
+        [
+            "Получить новости",
+            "Изменить новостные категории",
+            "Изменить число считываемых новостей",
+        ],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -25,10 +26,6 @@ def get_start_keyboard():
 def get_categories_keyboard(user_id: str):
     choosen_categories = get_user_categories(user_id)
     choosen_categories_info = list(choosen_categories.items())
-    choosen_categories_info = [
-        (category, status_to_bool[is_choosen])
-        for category, is_choosen in choosen_categories_info
-    ]
     keyboard = [
         [
             status_emoji[is_choosen] + " " + category
@@ -108,8 +105,9 @@ async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     sure_user_registration(user_id)
     channels = get_user_channels(user_id)
     choosen_categories = get_user_categories(user_id)
+    news_readcount = int(get_user_readcount(user_id))
 
-    news = await get_news(channels)  # Получаем новости
+    news = await get_news(channels, news_readcount)  # Получаем новости
     if len(news) == 0:
         await update.message.reply_text(
             "Новостей не нашлось",
@@ -126,7 +124,6 @@ async def get_news_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
         return
     news = get_pretty_news(news)
-    # news = get_pretty_news_parse_mode(news)
     for item in news:
         if item[0] == "" or item[1] == "":
             continue
@@ -164,7 +161,20 @@ async def change_current_categories(
         "Выберите нужные новостные категории:",
         reply_markup=get_categories_keyboard(user_id),
     )
-    context.user_data["action"] = "categories_change"  # Сохраняем действие
+    context.user_data["action"] = "change_categories"  # Сохраняем действие
+
+
+# Обработчик кнопки "Изменить число считываемых новостей"
+async def change_news_read_count(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    user_id = str(update.message.from_user.id)
+    old_readcount = get_user_readcount(user_id)
+    await update.message.reply_text(
+        f"Введите, сколько последних новостей из каждого канала исследовать (сейчас это {old_readcount}):",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    context.user_data["action"] = "change_readcount"
 
 
 # Обработчик текстовых сообщений
@@ -217,7 +227,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 "Каналы не найдены для удаления.", reply_markup=get_start_keyboard()
             )
         context.user_data["action"] = None  # Сбрасываем действие
-    elif action == "categories_change":
+    elif action == "change_categories":
         change_command = update.message.text.split()[1:]
         change_command = " ".join(change_command)
 
@@ -242,6 +252,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 reply_markup=get_categories_keyboard(user_id),
             )
             print(change_command, "failed")  # TODO: remove
+    elif action == "change_readcount":
+        new_readcount = update.message.text.split()[0]
+        if new_readcount.isdigit():
+            change_user_readcount(user_id, new_readcount)
+            context.user_data["action"] = None  # Сбрасываем действие
+            await update.message.reply_text(
+                f"Теперь считываем по {new_readcount} новостей из каждого канала!",
+                reply_markup=get_start_keyboard(),
+            )
+        else:
+            await update.message.reply_text(
+                f"Введите корректное число",
+                reply_markup=ReplyKeyboardRemove(),
+            )
 
     else:
         await update.message.reply_text(
@@ -262,3 +286,5 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await get_news_command(update, context)
     elif text == "Изменить новостные категории":
         await change_current_categories(update, context)
+    elif text == "Изменить число считываемых новостей":
+        await change_news_read_count(update, context)

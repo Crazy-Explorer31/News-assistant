@@ -23,14 +23,14 @@ async def channel_exists(channel) -> bool:
         await client.disconnect()  # Отключаем клиента
 
 
-async def get_news(channels) -> str:
+async def get_news(channels, news_readcount) -> str:
     news = []
     await client.start()  # Запускаем клиента
 
     for channel in channels:
         try:
             async for message in client.iter_messages(
-                channel, limit=4
+                channel, limit=news_readcount
             ):  # Получаем последнее сообщение
                 news.append(f"{channel}: {message.text}")
         except Exception as e:
@@ -46,24 +46,3 @@ def highlight_heading(list_two):
 
 def get_pretty_news(news):
     return [highlight_heading(item.split(":", 1)) for item in news]
-
-
-def get_pretty_news_parse_mode(pretty_news):
-    """Принимает список пар из `get_pretty_news` и добавляет в каждую пару parse_mode новости"""
-    for i, item in enumerate(pretty_news):
-        parse_mode = get_parse_mode(item[1])
-        pretty_news[i].append(parse_mode)
-
-        if item[0] == "⬇⬇⬇*" + "pitlive" + "*⬇⬇⬇":
-            print(item[1])
-
-    return pretty_news
-
-
-def get_parse_mode(text: str):
-    if "<" in text and ">" in text:
-        parse_mode = "HTML"
-    else:
-        parse_mode = "Markdown"
-
-    return parse_mode
