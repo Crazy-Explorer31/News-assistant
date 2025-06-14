@@ -41,8 +41,29 @@ async def get_news(channels) -> str:
 
 
 def highlight_heading(list_two):
-    return ["*" + list_two[0] + "*", list_two[1].strip()]
+    return ["⬇⬇⬇*" + list_two[0] + "*⬇⬇⬇", list_two[1].strip()]
 
 
 def get_pretty_news(news):
-    return ["\n".join(highlight_heading(item.split(":", 1))) for item in news]
+    return [highlight_heading(item.split(":", 1)) for item in news]
+
+
+def get_pretty_news_parse_mode(pretty_news):
+    """Принимает список пар из `get_pretty_news` и добавляет в каждую пару parse_mode новости"""
+    for i, item in enumerate(pretty_news):
+        parse_mode = get_parse_mode(item[1])
+        pretty_news[i].append(parse_mode)
+
+        if item[0] == "⬇⬇⬇*" + "pitlive" + "*⬇⬇⬇":
+            print(item[1])
+
+    return pretty_news
+
+
+def get_parse_mode(text: str):
+    if "<" in text and ">" in text:
+        parse_mode = "HTML"
+    else:
+        parse_mode = "Markdown"
+
+    return parse_mode
