@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 from scipy import sparse
 import requests
 
@@ -32,21 +30,29 @@ y_test = get_dataset(datasets['y_test.csv'], 'y_test.csv')['category']
 
 from sklearn.metrics import accuracy_score
 from catboost import CatBoostClassifier
+import joblib
 
 cat_boost = CatBoostClassifier(
-    iterations=100,
-    learning_rate=0.5,
-    depth=6,
-    verbose=1,
-    random_seed=42
+    iterations=500,
+    learning_rate=0.1,
+    depth=8,
+    loss_function='MultiClass',
+    devices=':0',
+    verbose=10,
+    early_stopping_rounds=50,
+    bootstrap_type='Bayesian',
+    used_ram_limit='10gb',
 )
 
+
 cat_boost.fit(tfidf_train, y_train)
+
+y_pred_train = cat_boost.predict(tfidf_train)
+accuracy = accuracy_score(y_train, y_pred_train)
+print("Точность на тренировочной выборке:", accuracy)
 
 y_pred = cat_boost.predict(tfidf_test)
 accuracy = accuracy_score(y_test, y_pred)
 print("Точность на тестовой выборке:", accuracy)
 
-y_pred_train = cat_boost.predict(tfidf_train)
-accuracy = accuracy_score(y_train, y_pred_train)
-print("Точность на тренировочной выборке:", accuracy)
+# joblib.dump(cat_boost, "../models/catboost_model.joblib") # need to add vectorizer
