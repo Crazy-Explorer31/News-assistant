@@ -2,9 +2,9 @@ import telegram
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
-from manage_user_data import *
-from news_filter import get_filtered_news
-from news_reader import channel_exists, get_news, get_pretty_news
+from .manage_user_data import *
+from .news_filter import get_filtered_news
+from .news_reader import channel_exists, get_news, get_pretty_news
 
 # Статус ---> эмодзи
 status_emoji = {True: "✅", False: "❌"}
