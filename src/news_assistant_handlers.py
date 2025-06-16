@@ -2,9 +2,9 @@ import telegram
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
-from manage_user_data import *
-from news_filter import get_filtered_news
-from news_reader import channel_exists, get_news, get_pretty_news
+from .manage_user_data import *
+from .news_filter import get_filtered_news
+from .news_reader import channel_exists, get_news, get_pretty_news
 
 # Статус ---> эмодзи
 status_emoji = {True: "✅", False: "❌"}
@@ -254,7 +254,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             print(change_command, "failed")  # TODO: remove
     elif action == "change_readcount":
         new_readcount = update.message.text.split()[0]
-        if new_readcount.isdigit():
+        if new_readcount.isdigit() and 1 <= int(new_readcount) <= 30:
             change_user_readcount(user_id, new_readcount)
             context.user_data["action"] = None  # Сбрасываем действие
             await update.message.reply_text(
@@ -263,7 +263,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
         else:
             await update.message.reply_text(
-                f"Введите корректное число",
+                f"Введите корректное число от 1 до 30",
                 reply_markup=ReplyKeyboardRemove(),
             )
 

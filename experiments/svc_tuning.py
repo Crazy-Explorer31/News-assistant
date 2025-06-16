@@ -1,11 +1,11 @@
-import pandas as pd
-from scipy import sparse
-import requests
-from sklearn.metrics import accuracy_score
-from src.news_classifier_load import *
-from sklearn.svm import LinearSVC
 import ssl
+
 import nltk
+import pandas as pd
+from joblib import dump
+from sklearn.metrics import accuracy_score
+
+from src.news_classifier_load import *
 
 try:
     _create_unverified_https_context = ssl._create_unverified_context
@@ -14,14 +14,10 @@ except AttributeError:
 else:
     ssl._create_default_https_context = _create_unverified_https_context
 
-nltk.download('stopwords')
-
-from joblib import load, dump
-from src.news_classifier_load import NewsClassifierLoader
-
+nltk.download("stopwords")
 
 with open("../data/validation_posts.txt") as f:
-    news_list = f.read().strip().split('@')
+    news_list = f.read().strip().split("@")
 
 with open("../data/validation_answers.txt") as f:
     y_test = list(map(int, f.read().strip().split()))
@@ -36,7 +32,7 @@ print(f"svc  accuracy: {acc}")
 clf_svc = svc_model.classifier
 vectorizer = svc_model.vectorizer
 with open("../data/train_posts.txt") as f:
-    news_train = f.read().strip().split('@')
+    news_train = f.read().strip().split("@")
 with open("../data/train_answers.txt") as f:
     y_train = list(map(int, f.read().strip().split()))
 
@@ -49,4 +45,4 @@ y_pred = svc_model.predict(news_df).tolist()
 acc = accuracy_score(y_test, y_pred)
 print(f"new svc  accuracy: {acc}")
 
-dump((clf_svc, vectorizer), '../models/svc_tuned_model_and_vec.joblib')
+dump((clf_svc, vectorizer), "../models/svc_tuned_model_and_vec.joblib")

@@ -1,9 +1,9 @@
 # from news_classifier_load import classifier
 import pandas as pd
 
-from news_classifier_load import NewsClassifierLoader
+from .news_classifier_load import NewsClassifierLoader
 
-classifier = NewsClassifierLoader("./models/logistic_regression_model.joblib")
+classifier = NewsClassifierLoader("./models/svc_tuned_model_and_vec.joblib")
 
 
 def get_filtered_news(
