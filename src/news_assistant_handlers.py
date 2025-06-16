@@ -254,7 +254,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             print(change_command, "failed")  # TODO: remove
     elif action == "change_readcount":
         new_readcount = update.message.text.split()[0]
-        if new_readcount.isdigit():
+        if new_readcount.isdigit() and 1 <= int(new_readcount) <= 30:
             change_user_readcount(user_id, new_readcount)
             context.user_data["action"] = None  # Сбрасываем действие
             await update.message.reply_text(
@@ -263,7 +263,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
         else:
             await update.message.reply_text(
-                f"Введите корректное число",
+                f"Введите корректное число от 1 до 30",
                 reply_markup=ReplyKeyboardRemove(),
             )
 
